@@ -110,7 +110,7 @@ def get_school_links(url: str, target: str, link: str, source=None) -> list[str]
     for link in soup.find_all('a'):
         href = link.get('href')
         if href and target in href:  # Adjusted to match your condition
-            school_links.append(link.replace("href", href))
+            school_links.append(url.replace("href", href))
     return school_links
 
 def extract_emails_from_school_page(url: str, c=None, driver=None) -> tuple[set[str], pycurl.Curl | None]:
