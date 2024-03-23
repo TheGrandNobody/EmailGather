@@ -18,16 +18,22 @@ TARGET_INTERNATIONAL = "/in/"
 
 COUNTRY = 'Netherlands'
 
-def init_driver() -> webdriver.Firefox:
+def init_driver(proxy=False) -> webdriver.Firefox:
     """ Initialize a Selenium webdriver for Firefox.
 
     Returns:
         webdriver.Firefox: The Selenium webdriver object.
     """
     options = FirefoxOptions()
+    if proxy:
+        options.set_preference("network.proxy.type", 1)
+        options.set_preference("network.proxy.socks", sys.argv[3])
+        options.set_preference("network.proxy.socks_port", int(sys.argv[4]))
+        options.set_preference("network.proxy.socks_version", 5)
     options.add_argument("--headless")  # This line enables headless mode
     service = FirefoxService(executable_path=GeckoDriverManager().install())
     driver = webdriver.Firefox(service=service, options=options)
+    driver.set_page_load_timeout(60)
     return driver
 
 def fetch_url_static(url: str, curl=None) -> tuple[str, pycurl.Curl]:
@@ -85,7 +91,6 @@ def fetch_url_dynamic(url: str, driver: webdriver.Chrome | webdriver.Firefox, so
                 button_to_click.click()
             except TimeoutException:
                 # If the button is no longer present or not clickable within the timeout, break from the loop
-                print("No more items to load.")
                 searching = False
     page_source = driver.page_source
     if not source:
@@ -94,10 +99,15 @@ def fetch_url_dynamic(url: str, driver: webdriver.Chrome | webdriver.Firefox, so
 
 def get_links(soup: BeautifulSoup, target: str, newurl: str, international=False) -> list:
     school_links = []
-    for link in soup if international else soup.find_all('a'):
+    # Ensure we always have an iterable of elements, adjusting based on `international`
+    links = soup if international else soup.find_all('a')
+    
+    for link in links:
+        if international:
+            link = link.find('a')
         href = link.get('href')
-        if href and target in href:  # Adjusted to match condition
-            school_links.append(newurl.replace("href", href))
+        if href and target in href:
+            school_links.append(href if international else newurl.replace("href", href))
     return school_links
 
 def get_school_links(url: str, target: str, newurl: str, source=None, international=False) -> list[str]:
@@ -119,7 +129,7 @@ def get_school_links(url: str, target: str, newurl: str, source=None, internatio
     if international:
         soup = soup.find('div', id='cities-schools').find_all('h3', class_='mb20')
         
-    return get_links(soup, target, newurl)
+    return get_links(soup, target, newurl, international)
 
 def extract_emails_from_school_page(url: str, c=None, driver=None) -> tuple[set[str], pycurl.Curl | None]:
     """ Extracts emails from a school page.
@@ -150,21 +160,23 @@ def main() -> None:
     """ Main function to run the email gathering bot.
     """
     # Check if the page is to be fetched using Selenium or pycurl
-    if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} (True | False) (-i | -p)")
+    if len(sys.argv) < 3:
+        print(f"Usage: {sys.argv[0]} (True | False) (-i | -p) optional: (both required) ip port")
         sys.exit(1)
-
+    # Check if the user wants to use a proxy
+    proxy = len(sys.argv) > 3
     # Initialize variables
     curl, driver, page_source, all_emails = None, None, None, set()
 
     # Fetch emails for native public schools
     if sys.argv[2].lower() == '-p':
+        print("Fetching links")
         # Get the links to the school pages
         if sys.argv[1].lower() == 'true':
-            driver = init_driver()
+            driver = init_driver(proxy)
             page_source = fetch_url_dynamic(URL, driver, True)
         school_links = get_school_links(URL, TARGET_PUBLIC, "https://scholenopdekaart.nlhrefcontact", page_source)
-
+        print("Fetching emails")
         # Extract emails from the school pages
         for school_url in school_links:
             emails, curl = extract_emails_from_school_page(school_url, curl if all_emails else None, driver=driver)
@@ -172,33 +184,45 @@ def main() -> None:
                 all_emails.update(emails)
     # Otherwise fetch emails for international schools
     else:
-        failed = []
+        print("Fetching lists")
+        failed, city_links, page_links, school_links = [], set(), set(), []
         # Initialize a Mozilla Firefox webdriver
-        driver = init_driver()
-        # Fetch the page source
-        page_source = fetch_url_dynamic(f"https://www.international-schools-database.com/country/{COUNTRY.lower()}", driver, True)
-        # Get the links to the school pages
-        page_links = set(i for i in get_school_links("", TARGET_INTERNATIONAL, "href", page_source, True))
-        print(page_links)
-        exit()
-        # Get the links to the school websites
-        school_links = []
-        for link in page_links:
-            soup = BeautifulSoup(fetch_url_dynamic(link, driver), 'html.parser')
-            a_tag = soup.find('a', title="School's webpage")
-            if a_tag:
-                href_value = a_tag['href']
-                school_links.append(href_value)
+        driver = init_driver(proxy)
+        school_links = ['https://www.isrlo.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.internationalschoolwassenaar.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.uwcmaastricht.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.internationalwaldorfschool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.riversarnhem.org/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.britams.nl/?utm_campaign=premium+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.elckerlyc-international.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.nordangliaeducation.com/nais-rotterdam?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.esbergen.eu/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.optimist-international-school.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.g-s-v.nl/en/international-primary-school?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://isgroningen.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.amityschool.nl/?utm_campaign=premium+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.ash.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.internationalschoolhaarlem.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.harbourinternational.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.florencius.nl/bilingual-school/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.winford.nl/en/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.tisaschool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://internationalschooltwente.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.ishthehague.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://gmischool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.winford.nl/en/schools/winford-dutch-schools/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.europeanschoolthehague.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://internationalschoolbreda.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://sekolah-indonesia.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com#', 'https://hsvid.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'http://www.jsa.nl/11ELNL/English.html?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.britishschool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://riss.wolfert.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://ipshilversum.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://isleiden.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.ishilversum.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://disdh.nl/de/home/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://lfvvg.com/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://alasca.espritscholen.nl/home?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.amersfoortinternationalschool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://lighthousese.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://lfvvg.com/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.isutrecht.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://salto-internationalschool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://internationalschoolalmere.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://internationalschooldelft.com/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.islaren.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.isa.nl/?utm_campaign=premium+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.internationalfrenchschool.com/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://aics.espritscholen.nl/home/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://eerde.com/?utm_campaign=premium+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.isecampus.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://amstelland-international-school.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://denise.espritscholen.nl/en/home?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.sondervickinternational.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com']
+        # # Fetch the page source
+        # page_source = fetch_url_dynamic(f"https://www.international-schools-database.com/country/{COUNTRY.lower()}", driver, True)
+        # # Get the links to the city pages
+        # city_links.update(get_school_links("", TARGET_INTERNATIONAL, "href", page_source, True))
+        # print("Fetching Pages")
+        # # Get the links to the school pages
+        # for city_url in city_links:
+        #     city_source = fetch_url_dynamic(city_url, driver, True)
+        #     soup = BeautifulSoup(city_source, 'html.parser')
+        #     # Function to check if an element has a 'data-id' attribute
+        #     def has_data_id(tag):
+        #         return tag.has_attr('data-id')
+        #     # Find all elements that have a 'data-id' attribute
+        #     elements = soup.find_all(has_data_id)
+        #     for element in elements:
+        #         page_links.add(element.get('href'))
+        # print("Fetching links")
+        # # Get the links to the school websites
+        # for link in page_links:
+        #     soup = BeautifulSoup(fetch_url_dynamic(link, driver), 'html.parser')
+        #     a_tag = soup.find('a', title="School's webpage")
+        #     if a_tag:
+        #         href_value = a_tag['href']
+        #         school_links.append(href_value)
+        print("Fetching emails")
         # Extract emails from the school pages
         for url in school_links:
             contact_url, failed_contact = None, False
             # Try to find a contacts page
             soup = BeautifulSoup(fetch_url_dynamic(url, driver), 'html.parser')
-            links = soup.find_all('a')
-            for link in links:
+            for link in soup.find_all('a'):
                 href = link.get('href')
                 if href and 'contact' in href:
-                    contact_url = href
+                    contact_url = href if 'http' in href else url + href
                     # Extract emails from the contact page
                     soup2 = BeautifulSoup(fetch_url_dynamic(contact_url, driver), 'html.parser')
                     # Define a function to use as a filter for info emails
