@@ -92,9 +92,9 @@ def fetch_url_dynamic(url: str, driver: webdriver.Chrome | webdriver.Firefox, so
         time.sleep(3)
     return page_source
 
-def get_links(soup: BeautifulSoup, target: str, newurl: str) -> list:
+def get_links(soup: BeautifulSoup, target: str, newurl: str, international=False) -> list:
     school_links = []
-    for link in soup.find_all('a'):
+    for link in soup if international else soup.find_all('a'):
         href = link.get('href')
         if href and target in href:  # Adjusted to match condition
             school_links.append(newurl.replace("href", href))
@@ -118,7 +118,6 @@ def get_school_links(url: str, target: str, newurl: str, source=None, internatio
     # If the page is for international schools, find the div with the cities and schools
     if international:
         soup = soup.find('div', id='cities-schools').find_all('h3', class_='mb20')
-        print(soup)
         
     return get_links(soup, target, newurl)
 
