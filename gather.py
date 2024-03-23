@@ -91,7 +91,7 @@ def fetch_url_dynamic(url: str, driver: webdriver.Chrome | webdriver.Firefox, so
         time.sleep(3)
     return page_source
 
-def get_school_links(url: str, target: str, link: str, source=None) -> list[str]:
+def get_school_links(url: str, target: str, newurl: str, source=None) -> list[str]:
     """ Get the links to the school pages from the main page.
 
     Args:
@@ -110,7 +110,7 @@ def get_school_links(url: str, target: str, link: str, source=None) -> list[str]
     for link in soup.find_all('a'):
         href = link.get('href')
         if href and target in href:  # Adjusted to match your condition
-            school_links.append(url.replace("href", href))
+            school_links.append(newurl.replace("href", href))
     return school_links
 
 def extract_emails_from_school_page(url: str, c=None, driver=None) -> tuple[set[str], pycurl.Curl | None]:
@@ -127,7 +127,6 @@ def extract_emails_from_school_page(url: str, c=None, driver=None) -> tuple[set[
     # Check if we are using pycurl or Selenium
     if driver:
         html = fetch_url_dynamic(url, driver)
-        curl = None
     else:
         html, curl = fetch_url_static(url, c)
     soup = BeautifulSoup(html, 'html.parser')
@@ -137,7 +136,6 @@ def extract_emails_from_school_page(url: str, c=None, driver=None) -> tuple[set[
             # Remove 'mailto:' from the email
             email = href.replace('mailto:', '')
             return {email}, (None if driver else curl)
-    
     return None, None if driver else curl
 
 def main() -> None:
@@ -167,6 +165,7 @@ def main() -> None:
             else:
                 emails, curl = extract_emails_from_school_page(school_url, curl, driver=driver)
             if emails:
+                print("here")
                 all_emails.update(emails)
     # Otherwise fetch emails for international schools
     else:
