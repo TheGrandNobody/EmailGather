@@ -13,7 +13,8 @@ from selenium.common.exceptions import TimeoutException
 import time
 
 URL = 'https://scholenopdekaart.nl/zoeken/basisscholen?zoektermen=Groningen&weergave=Lijst'
-TARGET = "basisscholen/groningen"
+TARGET_PUBLIC = "basisscholen/groningen"
+TARGET_INTERNATIONAL = "/in/"
 
 COUNTRY = 'Netherlands'
 
@@ -91,7 +92,15 @@ def fetch_url_dynamic(url: str, driver: webdriver.Chrome | webdriver.Firefox, so
         time.sleep(3)
     return page_source
 
-def get_school_links(url: str, target: str, newurl: str, source=None) -> list[str]:
+def get_links(soup: BeautifulSoup, target: str, newurl: str) -> list:
+    school_links = []
+    for link in soup.find_all('a'):
+        href = link.get('href')
+        if href and target in href:  # Adjusted to match condition
+            school_links.append(newurl.replace("href", href))
+    return school_links
+
+def get_school_links(url: str, target: str, newurl: str, source=None, international=False) -> list[str]:
     """ Get the links to the school pages from the main page.
 
     Args:
@@ -106,12 +115,12 @@ def get_school_links(url: str, target: str, newurl: str, source=None) -> list[st
     if source is None:
         source, _ = fetch_url_static(url)
     soup = BeautifulSoup(source, 'html.parser')
-    school_links = []
-    for link in soup.find_all('a'):
-        href = link.get('href')
-        if href and target in href:  # Adjusted to match your condition
-            school_links.append(newurl.replace("href", href))
-    return school_links
+    # If the page is for international schools, find the div with the cities and schools
+    if international:
+        soup = soup.find('div', id='cities-schools').find_all('h3', class_='mb20')
+        print(soup)
+        
+    return get_links(soup, target, newurl)
 
 def extract_emails_from_school_page(url: str, c=None, driver=None) -> tuple[set[str], pycurl.Curl | None]:
     """ Extracts emails from a school page.
@@ -147,26 +156,22 @@ def main() -> None:
         sys.exit(1)
 
     # Initialize variables
-    curl, driver, all_emails = None, None, set()
+    curl, driver, page_source, all_emails = None, None, None, set()
 
     # Fetch emails for native public schools
     if sys.argv[2].lower() == '-p':
+        # Get the links to the school pages
         if sys.argv[1].lower() == 'true':
             driver = init_driver()
             page_source = fetch_url_dynamic(URL, driver, True)
-            school_links = get_school_links(URL, TARGET, "https://scholenopdekaart.nlhrefcontact", page_source)
-        else:
-            school_links = get_school_links(URL, TARGET, "https://scholenopdekaart.nlhrefcontact",)
+        school_links = get_school_links(URL, TARGET_PUBLIC, "https://scholenopdekaart.nlhrefcontact", page_source)
 
         # Extract emails from the school pages
         for school_url in school_links:
-            if not all_emails:
-                emails, curl = extract_emails_from_school_page(school_url, driver=driver)
-            else:
-                emails, curl = extract_emails_from_school_page(school_url, curl, driver=driver)
+            emails, curl = extract_emails_from_school_page(school_url, curl if all_emails else None, driver=driver)
             if emails:
-                print("here")
                 all_emails.update(emails)
+            print(all_emails)
     # Otherwise fetch emails for international schools
     else:
         failed = []
@@ -175,7 +180,9 @@ def main() -> None:
         # Fetch the page source
         page_source = fetch_url_dynamic(f"https://www.international-schools-database.com/country/{COUNTRY.lower()}", driver, True)
         # Get the links to the school pages
-        page_links = get_school_links("", TARGET, "href", page_source)
+        page_links = set(i for i in get_school_links("", TARGET_INTERNATIONAL, "href", page_source, True))
+        print(page_links)
+        exit()
         # Get the links to the school websites
         school_links = []
         for link in page_links:
@@ -224,7 +231,11 @@ def main() -> None:
                 # Otherwise add the URL to the failed list (for manual inspection)
                 else:
                     failed.append(url)
-                    
+        # Write the failed URLs to a file
+        with open('failed.txt', 'w') as file:
+            for url in sorted(failed):
+                file.write(f"{url}\n")
+
     # Close the pycurl object or the Selenium webdriver
     if curl:
         curl.close()
