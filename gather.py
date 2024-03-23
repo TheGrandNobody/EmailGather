@@ -170,7 +170,6 @@ def main() -> None:
             emails, curl = extract_emails_from_school_page(school_url, curl if all_emails else None, driver=driver)
             if emails:
                 all_emails.update(emails)
-            print(all_emails)
     # Otherwise fetch emails for international schools
     else:
         failed = []
