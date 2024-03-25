@@ -11,6 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.firefox import GeckoDriverManager
 from selenium.common.exceptions import TimeoutException
 import time
+import re
 
 URL = 'https://scholenopdekaart.nl/zoeken/basisscholen?zoektermen=Groningen&weergave=Lijst'
 TARGET_PUBLIC = "basisscholen/groningen"
@@ -223,33 +224,34 @@ def main() -> None:
                 href = link.get('href')
                 if href and 'contact' in href:
                     contact_url = href if 'http' in href else url + href
+                    print(url, contact_url)
                     # Extract emails from the contact page
                     soup2 = BeautifulSoup(fetch_url_dynamic(contact_url, driver), 'html.parser')
                     # Define a function to use as a filter for info emails
                     def has_at_in_href(tag):
-                        return tag.name == 'a' and tag.has_attr('href') and 'info' in tag['href']
-                    email = soup2.find(has_at_in_href)
-                    if email:
-                        all_emails.add(email['href'].replace('mailto:', ''))
-                    else:
-                        # Define a function to use as a filter for directors
-                        def has_at_in_href(tag):
-                            return tag.name == 'a' and tag.has_attr('href') and 'dir' in tag['href']
-                        email = soup2.find(has_at_in_href)
-                        if email:
+                        return tag.name == 'a' and tag.has_attr('href') and any(i in tag['href'] for i in ['info', 'contact', 'dir', 'administration']) and 'recru' not in tag['href']
+                    emails = soup2.find_all(has_at_in_href)
+                    for email in emails:
+                        if email and re.match(r"[^@]+@[^@]+\.[^@]+", email['href'].replace('mailto:', '')):
                             all_emails.add(email['href'].replace('mailto:', ''))
+                            failed_contact = False
+                            break
                         else:
                             failed_contact = True
-                    break
+                    if not failed_contact:
+                        break
             # If there is no contact page, try extracting emails from the main page
             if not contact_url or failed_contact:
                 # Define a function to use as a filter
                 def has_at_in_href(tag):
-                    return tag.name == 'a' and tag.has_attr('href') and '@' in tag['href']
-                a_tag = soup.find(has_at_in_href)
-                if a_tag:
+                    return tag.name == 'a' and tag.has_attr('href') and '@' in tag['href'] and 'recru' not in tag['href']
+                a_tags = soup.find_all(has_at_in_href)
+                for a_tag in a_tags:
                     email = a_tag['href'].replace('mailto:', '')
-                    all_emails.add(email)
+                    if re.match(r"[^@]+@[^@]+\.[^@]+", email):
+                        all_emails.add(email)
+                    else:
+                        failed.append(url)
                 # Otherwise add the URL to the failed list (for manual inspection)
                 else:
                     failed.append(url)
