@@ -189,31 +189,33 @@ def main() -> None:
         failed, city_links, page_links, school_links = set(), set(), set(), []
         # Initialize a Mozilla Firefox webdriver
         driver = init_driver(proxy)
-        school_links = {'https://www.isrlo.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.internationalschoolwassenaar.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.uwcmaastricht.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.internationalwaldorfschool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.riversarnhem.org/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.britams.nl/?utm_campaign=premium+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.elckerlyc-international.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.nordangliaeducation.com/nais-rotterdam?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.esbergen.eu/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.optimist-international-school.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.g-s-v.nl/en/international-primary-school?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://isgroningen.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.amityschool.nl/?utm_campaign=premium+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.ash.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.internationalschoolhaarlem.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.harbourinternational.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.florencius.nl/bilingual-school/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.winford.nl/en/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.tisaschool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://internationalschooltwente.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.ishthehague.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://gmischool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.winford.nl/en/schools/winford-dutch-schools/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.europeanschoolthehague.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://internationalschoolbreda.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://sekolah-indonesia.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com#', 'https://hsvid.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'http://www.jsa.nl/11ELNL/English.html?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.britishschool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://riss.wolfert.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://ipshilversum.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://isleiden.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.ishilversum.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://disdh.nl/de/home/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://lfvvg.com/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://alasca.espritscholen.nl/home?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.amersfoortinternationalschool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://lighthousese.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://lfvvg.com/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.isutrecht.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://salto-internationalschool.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://internationalschoolalmere.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://internationalschooldelft.com/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.islaren.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.isa.nl/?utm_campaign=premium+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.internationalfrenchschool.com/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://aics.espritscholen.nl/home/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://eerde.com/?utm_campaign=premium+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.isecampus.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://amstelland-international-school.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://denise.espritscholen.nl/en/home?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com', 'https://www.sondervickinternational.nl/?utm_campaign=free+listing&utm_medium=referral&utm_source=international-schools-database.com'}
-        # # Fetch the page source
-        # page_source = fetch_url_dynamic(f"https://www.international-schools-database.com/country/{COUNTRY.lower()}", driver, True)
-        # # Get the links to the city pages
-        # city_links.update(get_school_links("", TARGET_INTERNATIONAL, "href", page_source, True))
-        # print("Fetching Pages")
-        # # Get the links to the school pages
-        # for city_url in city_links:
-        #     city_source = fetch_url_dynamic(city_url, driver, True)
-        #     soup = BeautifulSoup(city_source, 'html.parser')
-        #     # Function to check if an element has a 'data-id' attribute
-        #     def has_data_id(tag):
-        #         return tag.has_attr('data-id')
-        #     # Find all elements that have a 'data-id' attribute
-        #     elements = soup.find_all(has_data_id)
-        #     for element in elements:
-        #         page_links.add(element.get('href'))
-        # print("Fetching links")
-        # # Get the links to the school websites
-        # for link in page_links:
-        #     soup = BeautifulSoup(fetch_url_dynamic(link, driver), 'html.parser')
-        #     a_tag = soup.find('a', title="School's webpage")
-        #     if a_tag:
-        #         href_value = a_tag['href']
-        #         school_links.append(href_value)
+        # Fetch the page source
+        page_source = fetch_url_dynamic(f"https://www.international-schools-database.com/country/{COUNTRY.lower()}", driver, True)
+        # Get the links to the city pages
+        city_links.update(get_school_links("", TARGET_INTERNATIONAL, "href", page_source, True))
+        print("Fetching Pages")
+        # Get the links to the school pages
+        for city_url in city_links:
+            city_source = fetch_url_dynamic(city_url, driver, True)
+            soup = BeautifulSoup(city_source, 'html.parser')
+            # Function to check if an element has a 'data-id' attribute
+            def has_data_id(tag):
+                return tag.has_attr('data-id')
+            # Find all elements that have a 'data-id' attribute
+            elements = soup.find_all(has_data_id)
+            for element in elements:
+                page_links.add(element.get('href'))
+        print("Fetching links")
+        # Get the links to the school websites
+        for link in page_links:
+            soup = BeautifulSoup(fetch_url_dynamic(link, driver), 'html.parser')
+            a_tag = soup.find('a', title="School's webpage")
+            if a_tag:
+                href_value = a_tag['href']
+                # Remove the refferal part of the URL
+                if '?' in href_value:
+                    href_value = href_value.split('?')[0]
+                school_links.append(href_value)
         print("Fetching emails")
         # Extract emails from the school pages
         for url in school_links:
@@ -224,6 +226,7 @@ def main() -> None:
                 href = link.get('href')
                 if href and 'contact' in href:
                     contact_url = href if 'http' in href else url + href
+                    print(contact_url)
                     # Extract emails from the contact page
                     soup2 = BeautifulSoup(fetch_url_dynamic(contact_url, driver), 'html.parser')
                     # Define a function to use as a filter for info emails
